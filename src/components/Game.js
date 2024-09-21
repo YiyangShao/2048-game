@@ -1,115 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, Alert, StyleSheet, Modal, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import Tile from './Tile';
+import { GameOverModal, GameWonModal } from './Modals';
+import {
+  moveLeft, moveRight, moveUp, moveDown, addRandomTile,
+  checkForWin, checkForGameOver
+} from '../utils/boardUtils';
 
 const { width } = Dimensions.get('window');
 const boardSize = Math.min(width * 0.9, 320);
-
-const getRandomPosition = (board) => {
-  const emptyTiles = [];
-  board.forEach((row, rowIndex) => {
-    row.forEach((tile, colIndex) => {
-      if (tile.value === 0) {
-        emptyTiles.push([rowIndex, colIndex]);
-      }
-    });
-  });
-
-  if (emptyTiles.length === 0) return null;
-
-  const randomIndex = Math.floor(Math.random() * emptyTiles.length);
-  return emptyTiles[randomIndex];
-};
-
-const resetTileStates = (board) => {
-  return board.map(row =>
-    row.map(tile => ({
-      value: tile.value,
-      isNew: false,
-      isCombined: false,
-    }))
-  );
-};
-
-const addRandomTile = (board) => {
-  const position = getRandomPosition(board);
-  if (position === null) return board;
-
-  const [row, col] = position;
-  const newBoard = [...board];
-  newBoard[row][col] = { value: Math.random() < 0.6 ? 2 : 4, isNew: true, isCombined: false };
-  return newBoard;
-};
-
-const slideAndCombineRow = (row, updateScore) => {
-  let arr = row.filter(tile => tile.value); // Filter out all zeros
-  for (let i = 0; i < arr.length - 1; i++) {
-    if (arr[i].value === arr[i + 1].value) { // Combine equal tiles
-      arr[i].value *= 2;
-      arr[i].isCombined = true;
-      updateScore(arr[i].value); // Update the score with the new tile value
-      arr[i + 1].value = 0;
-    }
-  }
-  arr = arr.filter(tile => tile.value); // Filter out zeros again after combination
-  return [...arr, ...Array(4 - arr.length).fill({ value: 0, isNew: false, isCombined: false })]; // Pad the rest with zeros
-};
-
-const moveLeft = (board, updateScore) => {
-  const newBoard = resetTileStates(board);
-  return newBoard.map(row => slideAndCombineRow(row, updateScore));
-};
-
-const moveRight = (board, updateScore) => {
-  const newBoard = resetTileStates(board);
-  return newBoard.map(row => slideAndCombineRow(row.reverse(), updateScore).reverse());
-};
-
-const transpose = (board) => {
-  return board[0].map((_, colIndex) => board.map(row => row[colIndex]));
-};
-
-const moveUp = (board, updateScore) => {
-  const newBoard = resetTileStates(board);
-  const transposed = transpose(newBoard);
-  const moved = transposed.map(row => slideAndCombineRow(row, updateScore));
-  return transpose(moved);
-};
-
-const moveDown = (board, updateScore) => {
-  const newBoard = resetTileStates(board);
-  const transposed = transpose(newBoard);
-  const moved = transposed.map(row => slideAndCombineRow(row.reverse(), updateScore).reverse());
-  return transpose(moved);
-};
-
-const checkForWin = (board) => {
-  for (let row of board) {
-    if (row.some(tile => tile.value === 2048)) {
-      return true;
-    }
-  }
-  return false;
-};
-
-const checkForGameOver = (board) => {
-  for (let row of board) {
-    if (row.some(tile => tile.value === 0)) {
-      return false; // There are still empty spaces
-    }
-  }
-
-  // Check for possible merges horizontally and vertically
-  for (let i = 0; i < board.length; i++) {
-    for (let j = 0; j < board[i].length - 1; j++) {
-      if (board[i][j].value === board[i][j + 1].value || (board[j] && board[j][i].value === board[j + 1][i].value)) {
-        return false;
-      }
-    }
-  }
-  return true; // No more moves available
-};
 
 const Game = () => {
   const [board, setBoard] = useState(() => {
@@ -167,9 +67,9 @@ const Game = () => {
       setBoard(newBoard);
 
       if (checkForWin(newBoard)) {
-        setGameWon(true);  // Open win modal
+        setGameWon(true);
       } else if (checkForGameOver(newBoard)) {
-        setGameOver(true);  // Open game-over modal
+        setGameOver(true);
       }
     }
   }, [board]);
@@ -184,8 +84,6 @@ const Game = () => {
               <Tile 
                 key={`${rowIndex}-${colIndex}`}
                 value={tile.value}
-                isNew={tile.isNew}
-                isCombined={tile.isCombined}
               />
             ))}
           </View>
@@ -193,33 +91,6 @@ const Game = () => {
       </View>
     );
   };
-
-  // Handle keyboard input for web platform
-  useEffect(() => {
-    const handleKeyDown = (event) => {
-      switch (event.key) {
-        case 'ArrowLeft':
-          handleMove('left');
-          break;
-        case 'ArrowRight':
-          handleMove('right');
-          break;
-        case 'ArrowUp':
-          handleMove('up');
-          break;
-        case 'ArrowDown':
-          handleMove('down');
-          break;
-        default:
-          return;
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [handleMove]);
 
   return (
     <PanGestureHandler
@@ -238,28 +109,8 @@ const Game = () => {
         </TouchableOpacity>
         {renderBoard()}
 
-        {/* Game Over and Win Modals */}
-        <Modal visible={gameOver} transparent={true} animationType="slide">
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalText}>Game Over!</Text>
-              <TouchableOpacity onPress={restartGame} style={styles.modalButton}>
-                <Text style={styles.modalButtonText}>Restart</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        <Modal visible={gameWon} transparent={true} animationType="slide">
-          <View style={styles.modalContainer}>
-            <View style={styles.modalContent}>
-              <Text style={styles.modalText}>Congratulations! You won!</Text>
-              <TouchableOpacity onPress={restartGame} style={styles.modalButton}>
-                <Text style={styles.modalButtonText}>Play Again</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
+        <GameOverModal visible={gameOver} onRestart={restartGame} />
+        <GameWonModal visible={gameWon} onRestart={restartGame} />
       </View>
     </PanGestureHandler>
   );
@@ -302,32 +153,6 @@ const styles = StyleSheet.create({
   score: {
     fontSize: 24,
     marginVertical: 10,
-  },
-  modalContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-  },
-  modalContent: {
-    width: 300,
-    padding: 20,
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    alignItems: 'center',
-  },
-  modalText: {
-    fontSize: 24,
-    marginBottom: 10,
-  },
-  modalButton: {
-    backgroundColor: '#8f7a66',
-    padding: 10,
-    borderRadius: 5,
-  },
-  modalButtonText: {
-    color: '#fff',
-    fontWeight: 'bold',
   },
 });
 

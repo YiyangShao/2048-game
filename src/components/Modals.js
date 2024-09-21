@@ -1,12 +1,12 @@
 import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-export const GameOverModal = ({ visible, restartGame }) => (
+export const GameOverModal = ({ visible, onRestart }) => (
   <Modal visible={visible} transparent={true} animationType="slide">
     <View style={styles.modalContainer}>
       <View style={styles.modalContent}>
         <Text style={styles.modalText}>Game Over!</Text>
-        <TouchableOpacity onPress={restartGame} style={styles.modalButton}>
+        <TouchableOpacity onPress={onRestart} style={styles.modalButton}>
           <Text style={styles.modalButtonText}>Restart</Text>
         </TouchableOpacity>
       </View>
@@ -14,12 +14,12 @@ export const GameOverModal = ({ visible, restartGame }) => (
   </Modal>
 );
 
-export const WinModal = ({ visible, restartGame }) => (
+export const GameWonModal = ({ visible, onRestart }) => (
   <Modal visible={visible} transparent={true} animationType="slide">
     <View style={styles.modalContainer}>
       <View style={styles.modalContent}>
         <Text style={styles.modalText}>Congratulations! You won!</Text>
-        <TouchableOpacity onPress={restartGame} style={styles.modalButton}>
+        <TouchableOpacity onPress={onRestart} style={styles.modalButton}>
           <Text style={styles.modalButtonText}>Play Again</Text>
         </TouchableOpacity>
       </View>
