@@ -2,6 +2,8 @@
 
 Welcome to the **2048 Game** built with **React Native** and **Expo**! 🎮
 
+![Gameplay Screenshot](./assets/game-screenshot.jpg)
+
 This project is a mobile-friendly version of the classic 2048 puzzle game, where you combine numbered tiles to reach the glorious **2048** tile! And guess what? It even works on the web! 🌐
 
 ## How to Play 🕹️
