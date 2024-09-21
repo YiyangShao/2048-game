@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Platform } from 'react-native';  // Import Platform from react-native
-import { PanGestureHandler } from 'react-native-gesture-handler';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Platform } from 'react-native';
+import { PanGestureHandler, State } from 'react-native-gesture-handler';  // Import State for gesture handler state management
 import Tile from './Tile';
 import { GameOverModal, GameWonModal } from './Modals';
 import {
@@ -44,7 +44,10 @@ const Game = () => {
   const handleMove = useCallback((direction) => {
     let newBoard;
     const updateScore = (points) => setScore(prevScore => prevScore + points);
-
+  
+    // Create a deep copy of the current board for comparison
+    const previousBoard = JSON.parse(JSON.stringify(board));
+  
     switch (direction) {
       case 'left':
         newBoard = moveLeft(board, updateScore);
@@ -61,11 +64,18 @@ const Game = () => {
       default:
         return; // Ignore other directions
     }
-
-    if (newBoard !== board) {
-      newBoard = addRandomTile(newBoard);
+  
+    // Check if the board has changed
+    const boardsAreDifferent = (board1, board2) => {
+      return board1.some((row, rowIndex) => 
+        row.some((tile, colIndex) => tile.value !== board2[rowIndex][colIndex].value)
+      );
+    };
+  
+    if (boardsAreDifferent(previousBoard, newBoard)) {
+      newBoard = addRandomTile(newBoard);  // Only add a new tile if the board has changed
       setBoard(newBoard);
-
+  
       if (checkForWin(newBoard)) {
         setGameWon(true);
       } else if (checkForGameOver(newBoard)) {
@@ -73,6 +83,7 @@ const Game = () => {
       }
     }
   }, [board]);
+  
 
   // Add keyboard input for web platform only
   useEffect(() => {
@@ -106,6 +117,7 @@ const Game = () => {
     }
   }, [handleMove]);
 
+  // Render the game board
   const renderBoard = () => {
     return (
       <View style={styles.boardContainer}>
@@ -115,7 +127,7 @@ const Game = () => {
               <Tile 
                 key={`${rowIndex}-${colIndex}`}
                 value={tile.value}
-              /> 
+              />
             ))}
           </View>
         ))}
@@ -125,11 +137,26 @@ const Game = () => {
 
   return (
     <PanGestureHandler
-      onGestureEvent={(event) => {
-        if (event.nativeEvent.translationX > 50) handleMove('right');
-        else if (event.nativeEvent.translationX < -50) handleMove('left');
-        else if (event.nativeEvent.translationY > 50) handleMove('down');
-        else if (event.nativeEvent.translationY < -50) handleMove('up');
+      onHandlerStateChange={(event) => {
+        if (event.nativeEvent.state === State.END) {
+          const { translationX, translationY } = event.nativeEvent;
+          const swipeThreshold = 50;
+
+          // Determine if the swipe is significant and in which direction
+          if (Math.abs(translationX) > Math.abs(translationY)) {
+            if (translationX > swipeThreshold) {
+              handleMove('right');
+            } else if (translationX < -swipeThreshold) {
+              handleMove('left');
+            }
+          } else {
+            if (translationY > swipeThreshold) {
+              handleMove('down');
+            } else if (translationY < -swipeThreshold) {
+              handleMove('up');
+            }
+          }
+        }
       }}
     >
       <View style={styles.container}>
