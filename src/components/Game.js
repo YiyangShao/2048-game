@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Platform } from 'react-native';  // Import Platform from react-native
 import { PanGestureHandler } from 'react-native-gesture-handler';
 import Tile from './Tile';
 import { GameOverModal, GameWonModal } from './Modals';
@@ -74,7 +74,38 @@ const Game = () => {
     }
   }, [board]);
 
-  // Render the game board
+  // Add keyboard input for web platform only
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const handleKeyDown = (event) => {
+        switch (event.key) {
+          case 'ArrowLeft':
+            handleMove('left');
+            break;
+          case 'ArrowRight':
+            handleMove('right');
+            break;
+          case 'ArrowUp':
+            handleMove('up');
+            break;
+          case 'ArrowDown':
+            handleMove('down');
+            break;
+          default:
+            return;
+        }
+      };
+
+      // Adding event listener
+      document.addEventListener('keydown', handleKeyDown);
+
+      // Cleanup function to remove event listener
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }
+  }, [handleMove]);
+
   const renderBoard = () => {
     return (
       <View style={styles.boardContainer}>
@@ -84,7 +115,7 @@ const Game = () => {
               <Tile 
                 key={`${rowIndex}-${colIndex}`}
                 value={tile.value}
-              />
+              /> 
             ))}
           </View>
         ))}
